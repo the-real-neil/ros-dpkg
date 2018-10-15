@@ -1,0 +1,174 @@
+#!/bin/sh
+
+# ros-debbah/configure-apt
+
+set -euvx
+
+readonly this="$(readlink -f "$0")"
+readonly here="$(dirname "${this}")"
+readonly whatami="$(basename "${here}").$(basename "${this}")"
+
+log() { echo "${whatami}[$$]: $@" >&2; }
+inform() { log "INFO: $@"; }
+warn() { log "WARNING: $@"; }
+error() { log "ERROR: $@"; }
+
+usage() {
+    cat <<EOF
+Usage: $(basename ${this}) [DISTRIBUTION]
+Configure apt to use additional repositories.
+
+Notes:
+
+    DISTRIBUTION defaults to \$(lsb_release --short --codename).
+
+Examples:
+
+    \$ $(basename ${this})           # requires lsb_release
+
+    \$ $(basename ${this}) trusty
+
+    \$ $(basename ${this}) xenial
+
+    \$ $(basename ${this}) bionic
+EOF
+}
+
+die() {
+    error "$@"
+    usage >&2
+    exit 1
+}
+
+while getopts ":h" opt; do
+    case "${opt}" in
+        h)
+            usage
+            exit 0
+            ;;
+        :) die "missing argument: -${OPTARG}" ;;
+        \?) die "bad option: -${OPTARG}" ;;
+    esac
+done
+shift "$((${OPTIND} - 1))"
+
+if [ 0 -eq "$#" ]; then
+    warn "missing distribution; will attempt to discover"
+    if ! command -v lsb_release >/dev/null 2>&1; then
+        die "missing program: lsb_release"
+    fi
+    if ! distribution="$(lsb_release --short --codename)"; then
+        die "failure: lsb_release --short --codename"
+    fi
+    readonly distribution="${distribution}"
+    inform "discovered distribution: ${distribution}"
+elif [ 1 -eq "$#" ]; then
+    readonly distribution="$1"
+else
+    die "bad args"
+fi
+
+if ! command -v gpg >/dev/null 2>&1; then
+    die "missing program: gpg"
+fi
+
+inform "gpg path: $(command -v gpg)"
+inform "gpg version: $(gpg --version)"
+
+# The following heredoc is the ASCII-armored gpg pubkey from Realsense. It's
+# used to verify the debian packages therefrom. It was acquired like this:
+#
+# # apt-key adv \
+# > --keyserver hkp://keyserver.ubuntu.com \
+# > --recv-key 0xC8B3A55A6F3EFCDE
+#
+# It was exported like this:
+#
+# # apt-key export 0xC8B3A55A6F3EFCDE
+#
+# Reference: https://github.com/IntelRealSense/librealsense/blob/master/doc/distribution_linux.md
+inform "installing public key: Realsense"
+apt-key add --verbose - <<'EOF'
+-----BEGIN PGP PUBLIC KEY BLOCK-----
+Version: GnuPG v1
+
+mQENBFpUqDEBCADuIoVeNfgr3owUxn0keHq9OPak+Phxk4ye/paDZ5JZ6D407GXt
+QI0Ct6TVj2J9tWkcsK+G4DDxOQDPLIMf+mgjJYX0jwt6ruminSIhhp5fvh3Ol33e
+X/2P01Iul/GhVlpg6MspnIiJOnv0okYNbOzSLdgxpmTk6dyxP49pHbLdzI7JugsS
+tJljQgBeBP6pNlzBVTDvEvP2cXnqTVFxm2skiw9hyN2o2CXjGhGOz6Z5L6iOf/ee
+8beYHomkEaaoNXc3Z+V5KzSg4uM1uYzqecxQ1InhrsYfb0ETjvAeJiNp1y+sSm+O
+CDJWNxJq8tNSFrwvKPZ+e6cvv15yN6hChkkRABEBAAG0NyJDTiA9IEludGVsKFIp
+IEludGVsKFIpIFJlYWxzZW5zZSIsIE89SW50ZWwgQ29ycG9yYXRpb26JAT4EEwEI
+ACgFAlpUqDECGwMFCRLNVIAGCwkIBwMCBhUIAgkKCwQWAgMBAh4BAheAAAoJEMiz
+pVpvPvzeGIAIAJiwFHVL/iqnDRVfzcI/Nm8gtoMDV2hU6QGcNkbwZn5JpoIyGGPh
+zR01rWYX6hvt9BzzZljW7MF6LPnfi0IXzZ8ml/wFx0GwF9u0acCkxCZr4aIReO4W
+t0Pe8u6uAIyhNdn9a4yacxFPdeU2W2w1xDTRUidiDO4V9vCllK4VGGHoBLi9ua6C
+qIZrdnRvX3ire6WybLz33JyDbEK9SlKqs8kwyz4uq9a0sry79oTQiK4jAgLxKGq/
+JA5ixemTnVrVIa+CZgUHqMW0SrgZeJDVMh7x2ZPGilSxmPDMNniEd5mxrFetFrzy
+quh0EmUG2XwVM89VNH4Y45USyqal4RhISMw=
+=IokU
+-----END PGP PUBLIC KEY BLOCK-----
+EOF
+
+inform "installing /etc/apt/sources.list.d/realsense.list"
+cat >/etc/apt/sources.list.d/realsense.list <<EOF
+# /etc/apt/sources.list.d/realsense.list
+#
+# public apt repository for realsense
+deb     http://realsense-hw-public.s3.amazonaws.com/Debian/apt-repo ${distribution} main
+EOF
+
+# The following heredoc is the ASCII-armored gpg pubkey from ROS. It's used
+# to verify the debian packages therefrom. It was acquired like this:
+#
+# # apt-key adv \
+# > --keyserver hkp://ha.pool.sks-keyservers.net:80 \
+# > --recv-key 421C365BD9FF1F717815A3895523BAEEB01FA116
+#
+# It was exported like this:
+#
+# # apt-key export rosbuild@ros.org
+#
+# Reference: http://wiki.ros.org/kinetic/Installation/Ubuntu
+inform "installing public key: ROS"
+apt-key add --verbose - <<'EOF'
+-----BEGIN PGP PUBLIC KEY BLOCK-----
+Version: GnuPG v1
+
+mQGiBEsy5KkRBADJbDSISoamRM5AA20bfAeBuhhaI+VaiCVcxw90sq9AI5lIc42F
+WzM2acm8yplqWiehAqOLKd+iIrqNGZ+VavZEPTx7o06UZUMRoPBiTFaCwrQ5avKz
+lt7ij8PRMVWNrJ7A2lDYXfFQVV1o3Xo06qVnv0KLLUmiur0LBu4H/oTH3wCgt+/I
+D3LUKaMJsc77KwFBTjHB0EsD/26Z2Ud12f3urSNyN6VMWnP3rz6xsmtY4Qsmkbnr
+JuduxCQBZv6bX1Cr2ulXkv0fFOr+s5OyUv7zyCPbxiJFh3Br7fJGb0b5/M208KPe
+giITY9hMh/aUbKjXCPoOXPxSL6SWOWV8taR6903EFyLBN0qno/kXIBKnVqBZobgn
+jIEPA/0fTnxtZtE7EpirGQMF2caJfv7/LCgXmRs9xAhgbE0/caoa1tnc79uaHmLZ
+FtbGFoAO31YNYM/IUHtmabbGdvZ4oYUwDhjBevVvC7aI+XhuNGK5mU8qCLLSEUOl
+CUr6BJq/0iFmjwjmwk9idZEYhqSNy2OoYJbq45rbHfbdKLEVrbQeUk9TIEJ1aWxk
+ZXIgPHJvc2J1aWxkQHJvcy5vcmc+iGAEExECACAFAksy5KkCGwMGCwkIBwMCBBUC
+CAMEFgIDAQIeAQIXgAAKCRBVI7rusB+hFmk7AJ0XsLp05KA8l3YzAumZfjSN04MZ
+jQCfQHfp4aQUXdOCUtetVo0QZUX3IuO5Ag0ESzLkrhAIAOCuSC83VXYWf8gOMSzd
+xwpsH/uLV9Wze2LGnajsJLjEOhcsz2BHfxqNXhYaE9aQaodPCpbUAkPq8tLbpXy0
+SWRCx0F5RcplXx5vIWbP6TlfPbRpK70w7IWd6vsNrjwEHjlhOLcNcj42sp5pgx4b
+dceK06k5Ml2hYovPnD9o2TYgjOqg5FHZ2g1J0103n/66bN/hZnpLaZJYQiPWCyq6
+K0565i1k2Y7hgWB/OXqwaqCehqmLTvpyQGzE1UJvKLuYU+T+4hBnSPbT3KIi5fCz
+lIwvxijOMcfbkLhzYQXcU0Rd1VItcd5nmPL4z97jBxzuhkgxXpGR4WGKhvsA2Z9Y
+UtsAAwYH/3Bf44bTpD9bVADUdab3e7zm8iHfh9K/a83mIgDB7mHV6WuemQVTf/1d
+eu4mI5WtpbOCoucybGfjGIIAcSxwIx6VfC7HSp4J51bOpHhbdDffUEk6QVsZjwoF
+yn3W9W3ZVeTI+ch/Qoo5a98SnmdjN8eXI/qCuiXOHc6rXDXc2R0iox/1EAS8xGVd
+cYZe7IWBO2CjCknyhLrWxZHoy+i1GCZ9KvPF/Ef2dmLhCydT73ZlumsY8N5vm76Q
+ul1G7f8LNbnMgXQafRkPffrAXSVhGY3Z2IiBwFNgxcKTq479l7yedYRGeU1A+SYI
+YmRFWHXt3rTkMlQSpxCsB0fAYfrwEqqISQQYEQIACQUCSzLkrgIbDAAKCRBVI7ru
+sB+hFpryAJ9qNz3h3ijt9TkAV0CHufsPT6Cl4gCglfg7tJn2lsSF3HTpoDDO1Fgg
+x9o=
+=AGYp
+-----END PGP PUBLIC KEY BLOCK-----
+EOF
+
+inform "installing /etc/apt/sources.list.d/ros.list"
+cat >/etc/apt/sources.list.d/ros.list <<EOF
+# /etc/apt/sources.list.d/ros.list
+#
+# public apt repository for ros
+deb     http://packages.ros.org/ros/ubuntu ${distribution} main
+deb-src http://packages.ros.org/ros/ubuntu ${distribution} main
+EOF

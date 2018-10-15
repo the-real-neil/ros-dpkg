@@ -1,0 +1,45 @@
+#!/bin/sh
+
+# ros-debbah/hooks/build
+
+set -euvx
+
+readonly this="$(readlink -f "$0")"
+readonly here="$(dirname "${this}")"
+readonly project_dir="$(dirname "${here}")"
+
+# Print the remote URL for the current branch
+#
+# $1 : git checkout directory
+get_vcs_url() {
+    git -C "$1" rev-parse --abbrev-ref --symbolic-full-name @{u} \
+        | grep -Eo '^[^/]+' \
+        | xargs -I{} git -C "$1" config "remote.{}.url"
+}
+
+# Print a sha1 for the current state of the checkout.
+#
+# When there are uncommitted changes, `git stash create` will make a commit
+# object (without storing it) and print it. When there are no uncommitted
+# changes, `git stash create` will print an empty string and succeed; in this
+# case we want get sha1sum of the HEAD. We attempt to print both, but take only
+# the first.
+#
+# $1 : git checkout directory
+get_vcs_ref() {
+    (
+        git -C "$1" stash create
+        git -C "$1" rev-parse HEAD
+    ) | head -1
+}
+
+env | sort
+
+# https://medium.com/microscaling-systems/labelling-automated-builds-on-docker-hub-f3d073fb8e1
+docker image build \
+    $(env | grep -Eo '^[^=]+' | xargs -I{} echo --build-arg {}) \
+    --build-arg BUILD_DATE="$(date -u +"%Y-%m-%dT%H:%M:%SZ")" \
+    --build-arg VCS_REF="$(get_vcs_ref "${project_dir}")" \
+    --build-arg VCS_URL="$(get_vcs_url "${project_dir}")" \
+    --tag "${IMAGE_NAME:-$(basename "${project_dir}")}" \
+    "${project_dir}"
