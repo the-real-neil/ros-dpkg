@@ -1,7 +1,7 @@
 # ros-debbah/Dockerfile
 
-ARG SOURCE_BRANCH="latest"
-FROM ros:${SOURCE_BRANCH}
+ARG DOCKER_TAG="latest"
+FROM ros:${DOCKER_TAG}
 ARG BUILD_DATE
 ARG VCS_REF
 ARG VCS_URL
