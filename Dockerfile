@@ -38,11 +38,11 @@ RUN set -euvx \
        libdistro-info-perl \
        libfile-fcntllock-perl \
        libparse-debcontrol-perl \
-       linux-image-$(uname -r) \
+       linux-image-generic \
        udev \
        xz-utils \
   && echo \
   && echo "re-installing linux image" \
-  && apt-get install --reinstall linux-image-$(uname -r) \
+  && apt-get install --reinstall linux-image-generic \
   && echo \
   && echo "done"
