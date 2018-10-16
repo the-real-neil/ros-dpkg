@@ -14,6 +14,7 @@ LABEL \
 ARG BUILD_CODE="default-build-code"
 WORKDIR /tmp/${BUILD_CODE}
 ADD configure-apt .
+ADD strip-maint .
 RUN set -euvx \
   && echo \
   && echo "make this container behave like a chroot" \
@@ -42,7 +43,7 @@ RUN set -euvx \
        udev \
        xz-utils \
   && echo \
-  && echo "re-installing linux image" \
-  && apt-get install --reinstall linux-image-generic \
+  && echo "install 'strip-maint'" \
+  && ./strip-maint -I $(dirname $(command -v switch_root)) \
   && echo \
   && echo "done"
