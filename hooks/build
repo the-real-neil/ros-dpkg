@@ -37,7 +37,7 @@ env | sort
 
 # https://medium.com/microscaling-systems/labelling-automated-builds-on-docker-hub-f3d073fb8e1
 docker image build \
-    $(env | grep -Eo '^[^=]+' | xargs -I{} echo --build-arg {}) \
+    $(env | sed -nr 's|^([^=]+).*$|--build-arg \1|gp') \
     --build-arg BUILD_DATE="$(date -u +"%Y-%m-%dT%H:%M:%SZ")" \
     --build-arg VCS_REF="$(get_vcs_ref "${project_dir}")" \
     --build-arg VCS_URL="$(get_vcs_url "${project_dir}")" \
