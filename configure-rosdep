@@ -63,6 +63,8 @@ shift "$((${OPTIND} - 1))"
 cat >/srv/realsense.yaml <<'EOF'
 intel-realsense-dfu:
   ubuntu: [intel-realsense-dfu]
+librealsense2:
+  ubuntu: [librealsense2]
 librealsense2-dbg:
   ubuntu: [librealsense2-dbg]
 librealsense2-dev:
@@ -77,6 +79,8 @@ librscalibrationapi:
   ubuntu: [librscalibrationapi]
 librscalibrationtool:
   ubuntu: [librscalibrationtool]
+realsense-sdk:
+  ubuntu: [realsense-sdk]
 realsense-sdk-dbg:
   ubuntu: [realsense-sdk-dbg]
 realsense-sdk-dev:
