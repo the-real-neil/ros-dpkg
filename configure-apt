@@ -2,16 +2,28 @@
 
 # ros-debbah/configure-apt
 
-set -euvx
+set -eu
 
 readonly this="$(readlink -f "$0")"
 readonly here="$(dirname "${this}")"
 readonly whatami="$(basename "${here}").$(basename "${this}")"
+readonly tmpdir="$(mktemp -dt "${whatami}.XXXXXX")"
 
-log() { echo "${whatami}[$$]: $@" >&2; }
-inform() { log "INFO: $@"; }
-warn() { log "WARNING: $@"; }
-error() { log "ERROR: $@"; }
+info() { logger -s -t "${whatami}[$$]" -p user.info "INFO: $@"; }
+warning() { logger -s -t "${whatami}[$$]" -p user.warning "WARNING: $@"; }
+error() { logger -s -t "${whatami}[$$]" -p user.error "ERROR: $@"; }
+
+die() {
+    error "$@"
+    usage >&2
+    exit 1
+}
+
+cleanup() {
+    status="$?"
+    rm -rf "${tmpdir}"
+    return "${status}"
+}
 
 usage() {
     cat <<EOF
@@ -34,11 +46,16 @@ Examples:
 EOF
 }
 
-die() {
-    error "$@"
-    usage >&2
-    exit 1
-}
+################################################################################
+
+trap cleanup EXIT
+export TMPDIR="${tmpdir}"
+export LC_ALL=C
+
+if ! [ 0 -eq "$(id -u)" ]; then
+    sudo "${this}"
+    exit "$?"
+fi
 
 while getopts ":h" opt; do
     case "${opt}" in
@@ -53,7 +70,7 @@ done
 shift "$((${OPTIND} - 1))"
 
 if [ 0 -eq "$#" ]; then
-    warn "missing distribution; will attempt to discover"
+    warning "missing distribution; will attempt to discover"
     if ! command -v lsb_release >/dev/null 2>&1; then
         die "missing program: lsb_release"
     fi
@@ -61,7 +78,7 @@ if [ 0 -eq "$#" ]; then
         die "failure: lsb_release --short --codename"
     fi
     readonly distribution="${distribution}"
-    inform "discovered distribution: ${distribution}"
+    info "discovered distribution: ${distribution}"
 elif [ 1 -eq "$#" ]; then
     readonly distribution="$1"
 else
@@ -72,8 +89,8 @@ if ! command -v gpg >/dev/null 2>&1; then
     die "missing program: gpg"
 fi
 
-inform "gpg path: $(command -v gpg)"
-inform "gpg version: $(gpg --version)"
+info "gpg path: $(command -v gpg)"
+info "gpg version: $(gpg --version)"
 
 # The following heredoc is the ASCII-armored gpg pubkey from Realsense. It's
 # used to verify the debian packages therefrom. It was acquired like this:
@@ -87,7 +104,7 @@ inform "gpg version: $(gpg --version)"
 # # apt-key export 0xC8B3A55A6F3EFCDE
 #
 # Reference: https://github.com/IntelRealSense/librealsense/blob/master/doc/distribution_linux.md
-inform "installing public key: Realsense"
+info "installing public key: Realsense"
 apt-key add --verbose - <<'EOF'
 -----BEGIN PGP PUBLIC KEY BLOCK-----
 Version: GnuPG v1
@@ -110,7 +127,7 @@ quh0EmUG2XwVM89VNH4Y45USyqal4RhISMw=
 -----END PGP PUBLIC KEY BLOCK-----
 EOF
 
-inform "installing /etc/apt/sources.list.d/realsense.list"
+info "installing /etc/apt/sources.list.d/realsense.list"
 cat >/etc/apt/sources.list.d/realsense.list <<EOF
 # /etc/apt/sources.list.d/realsense.list
 #
@@ -130,7 +147,7 @@ EOF
 # # apt-key export rosbuild@ros.org
 #
 # Reference: http://wiki.ros.org/kinetic/Installation/Ubuntu
-inform "installing public key: ROS"
+info "installing public key: ROS"
 apt-key add --verbose - <<'EOF'
 -----BEGIN PGP PUBLIC KEY BLOCK-----
 Version: GnuPG v1
@@ -164,7 +181,7 @@ x9o=
 -----END PGP PUBLIC KEY BLOCK-----
 EOF
 
-inform "installing /etc/apt/sources.list.d/ros.list"
+info "installing /etc/apt/sources.list.d/ros.list"
 cat >/etc/apt/sources.list.d/ros.list <<EOF
 # /etc/apt/sources.list.d/ros.list
 #

@@ -14,6 +14,7 @@ LABEL \
 ARG BUILD_CODE="default-build-code"
 WORKDIR /tmp/${BUILD_CODE}
 ADD configure-apt .
+ADD configure-rosdistro .
 ADD strip-maint .
 RUN set -euvx \
   && echo \
@@ -28,7 +29,7 @@ RUN set -euvx \
   && echo "update apt" \
   && apt-get -y update \
   && echo \
-  && echo "install tools for pcakage building" \
+  && echo "install tools for package building" \
   && apt-get -y --no-install-recommends install \
        devscripts \
        dpkg-dev \
@@ -43,11 +44,10 @@ RUN set -euvx \
        udev \
        xz-utils \
   && echo \
+  && echo "configure rosdistro" \
+  && ./configure-rosdistro \
+  && echo \
   && echo "install 'strip-maint'" \
   && ./strip-maint -I $(dirname $(command -v switch_root)) \
-  && echo \
-  && echo "configure rosdistro" \
-  && echo "yaml https://raw.githubusercontent.com/RealtimeRobotics/rosdistro/realsense/rosdep/base.yaml" \
-       >/etc/ros/rosdep/sources.list.d/00-realsense.list \
   && echo \
   && echo "done"

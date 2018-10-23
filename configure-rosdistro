@@ -1,0 +1,64 @@
+#!/bin/sh
+
+# ros-debbah/configure-rosdistro
+
+set -eu
+
+readonly this="$(readlink -f "$0")"
+readonly here="$(dirname "${this}")"
+readonly whatami="$(basename "${here}").$(basename "${this}")"
+readonly tmpdir="$(mktemp -dt "${whatami}.XXXXXX")"
+
+info() { logger -s -t "${whatami}[$$]" -p user.info "INFO: $@"; }
+warning() { logger -s -t "${whatami}[$$]" -p user.warning "WARNING: $@"; }
+error() { logger -s -t "${whatami}[$$]" -p user.error "ERROR: $@"; }
+
+die() {
+    error "$@"
+    usage >&2
+    exit 1
+}
+
+cleanup() {
+    status="$?"
+    rm -rf "${tmpdir}"
+    return "${status}"
+}
+
+usage() {
+    cat <<EOF
+Usage: $(basename ${this})
+Configure rosdistro to use additional repositories.
+
+Examples:
+
+    \$ $(basename ${this})
+EOF
+}
+
+################################################################################
+
+trap cleanup EXIT
+export TMPDIR="${tmpdir}"
+export LC_ALL=C
+
+if ! [ 0 -eq "$(id -u)" ]; then
+    sudo "${this}"
+    exit "$?"
+fi
+
+while getopts ":h" opt; do
+    case "${opt}" in
+        h)
+            usage
+            exit 0
+            ;;
+        :) die "missing argument: -${OPTARG}" ;;
+        \?) die "bad option: -${OPTARG}" ;;
+    esac
+done
+shift "$((${OPTIND} - 1))"
+
+cat >/etc/ros/rosdep/sources.list.d/00-realsense.list <<'EOF'
+yaml https://raw.githubusercontent.com/RealtimeRobotics/rosdistro/realsense/rosdep/base.yaml
+EOF
