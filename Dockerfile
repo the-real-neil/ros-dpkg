@@ -46,4 +46,8 @@ RUN set -euvx \
   && echo "install 'strip-maint'" \
   && ./strip-maint -I $(dirname $(command -v switch_root)) \
   && echo \
+  && echo "configure rosdistro" \
+  && echo "yaml https://raw.githubusercontent.com/RealtimeRobotics/rosdistro/realsense/rosdep/base.yaml" \
+       >/etc/ros/rosdep/sources.list.d/00-realsense.list \
+  && echo \
   && echo "done"
