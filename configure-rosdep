@@ -9,9 +9,10 @@ readonly here="$(dirname "${this}")"
 readonly whatami="$(basename "${here}").$(basename "${this}")"
 readonly tmpdir="$(mktemp -dt "${whatami}.XXXXXX")"
 
-info() { logger -s -t "${whatami}[$$]" -p user.info "INFO: $@"; }
-warning() { logger -s -t "${whatami}[$$]" -p user.warning "WARNING: $@"; }
-error() { logger -s -t "${whatami}[$$]" -p user.error "ERROR: $@"; }
+log() { echo "${whatami}[$$]: $@" >&2; }
+error() { log "ERROR: $@"; }
+warning() { log "WARNING: $@"; }
+info() { log "INFO: $@"; }
 
 die() {
     error "$@"

@@ -10,9 +10,21 @@ readonly whatami="$(basename "${here}").$(basename "${this}")"
 readonly tmpdir="$(mktemp -dt "${whatami}.XXXXXX")"
 
 log() { echo "${whatami}[$$]: $@" >&2; }
-inform() { log "INFO: $@"; }
-warn() { log "WARNING: $@"; }
 error() { log "ERROR: $@"; }
+warning() { log "WARNING: $@"; }
+info() { log "INFO: $@"; }
+
+die() {
+    error "$@"
+    usage >&2
+    exit 1
+}
+
+cleanup() {
+    status="$?"
+    rm -rf "${tmpdir}"
+    return "${status}"
+}
 
 usage() {
     cat <<EOF
@@ -34,17 +46,7 @@ Examples:
 EOF
 }
 
-die() {
-    error "$@"
-    usage >&2
-    exit 1
-}
-
-cleanup() {
-    status="$?"
-    rm -rf "${tmpdir}"
-    return "${status}"
-}
+################################################################################
 
 trap cleanup EXIT
 export TMPDIR="${tmpdir}"
