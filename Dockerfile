@@ -14,7 +14,7 @@ LABEL \
 ARG BUILD_CODE="default-build-code"
 WORKDIR /tmp/${BUILD_CODE}
 ADD configure-apt .
-ADD configure-rosdistro .
+ADD configure-rosdep .
 ADD strip-maint .
 RUN set -euvx \
   && echo \
@@ -44,8 +44,8 @@ RUN set -euvx \
        udev \
        xz-utils \
   && echo \
-  && echo "configure rosdistro" \
-  && ./configure-rosdistro \
+  && echo "configure rosdep" \
+  && ./configure-rosdep \
   && echo \
   && echo "install 'strip-maint'" \
   && ./strip-maint -I $(dirname $(command -v switch_root)) \
