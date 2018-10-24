@@ -92,14 +92,14 @@ if ! [ -f "${deb_file}" ]; then
     die "missing file: ${deb_file}"
 fi
 
-inform "extracting from ${deb_file}: control.tar.gz"
+info "extracting from ${deb_file}: control.tar.gz"
 ar -p "${deb_file}" control.tar.gz >control.tar.gz
 
 readonly control_dir="$(mktemp -dt control.dir.XXXXXX)"
-inform "extracting control.tar.gz to ${control_dir}"
+info "extracting control.tar.gz to ${control_dir}"
 tar -vxzf control.tar.gz -C "${control_dir}"
 
-inform "finding maintainer scripts in ${control_dir}"
+info "finding maintainer scripts in ${control_dir}"
 readonly maint_script_list="$(mktemp -t maint.script.list.XXXXXX)"
 find "${control_dir}" -type f -perm /111 \
      -regextype posix-extended -regex "${control_dir}/(pre|post)(inst|rm)" \
@@ -107,9 +107,9 @@ find "${control_dir}" -type f -perm /111 \
 
 # neuter any maintainer scripts, log what we do
 while read maint_script; do
-    inform "found maintainer script: ${maint_script}"
+    info "found maintainer script: ${maint_script}"
     if grep -q ldconfig "${maint_script}"; then
-        inform "replacing ${maint_script} with generic 'ldconfig' script"
+        info "replacing ${maint_script} with generic 'ldconfig' script"
         cat >"${maint_script}" <<'EOF'
 #!/bin/sh
 set -eu
@@ -120,15 +120,15 @@ case "${1:-}" in
 esac
 EOF
     else
-        inform "removing ${maint_script}"
+        info "removing ${maint_script}"
         rm -v "${maint_script}"
     fi
 done <"${maint_script_list}"
 
-inform "rebuilding control.tar.gz"
+info "rebuilding control.tar.gz"
 tar -vczf control.tar.gz -C "${control_dir}" .
 
-inform "replacing ${deb_file} control.tar.gz"
+info "replacing ${deb_file} control.tar.gz"
 ar -vr "${deb_file}" control.tar.gz
 
 rm -v control.tar.gz
