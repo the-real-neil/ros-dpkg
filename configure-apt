@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# ros-debbah/configure-apt
+# ros-dpkg/configure-apt
 
 set -eu
 

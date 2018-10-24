@@ -1,4 +1,4 @@
-# ros-debbah/Dockerfile
+# ros-dpkg/Dockerfile
 
 ARG DOCKER_TAG="latest"
 FROM ros:${DOCKER_TAG}

@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# ros-debbah/configure-rosdep
+# ros-dpkg/configure-rosdep
 
 set -eu
 

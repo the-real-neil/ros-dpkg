@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# ros-debbah/strip-maint
+# ros-dpkg/strip-maint
 
 set -eu
 

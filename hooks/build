@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# ros-debbah/hooks/build
+# ros-dpkg/hooks/build
 
 set -euvx
 
