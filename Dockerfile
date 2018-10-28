@@ -13,9 +13,8 @@ LABEL \
   maintainer="Neil Roza <neil@rtr.ai>"
 ARG BUILD_CODE="default-build-code"
 WORKDIR /tmp/${BUILD_CODE}
-ADD configure-apt .
-ADD configure-rosdep .
-ADD strip-maint .
+ADD ./scrippies/configure-apt ./configure-apt
+ADD ./scrippies/strip-maint ./strip-maint
 RUN set -euvx \
   && echo \
   && echo "make this container behave like a chroot" \
@@ -43,9 +42,6 @@ RUN set -euvx \
        linux-image-generic \
        udev \
        xz-utils \
-  && echo \
-  && echo "configure rosdep" \
-  && ./configure-rosdep \
   && echo \
   && echo "install 'strip-maint'" \
   && ./strip-maint -I $(dirname $(command -v switch_root)) \

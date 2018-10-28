@@ -1,0 +1,3 @@
+[submodule "scrippies"]
+	path = scrippies
+	url = https://github.com/RealtimeRobotics/scrippies.git
