@@ -7,6 +7,12 @@ set -euvx
 readonly this="$(readlink -f "$0")"
 readonly here="$(dirname "${this}")"
 readonly project_dir="$(dirname "${here}")"
+readonly whatami="$(basename "${project_dir}").$(basename "${here}").$(basename "${this}")"
+
+log() { echo "${whatami}[$$]: $@" >&2; }
+info() { log "INFO: $@"; }
+warning() { log "WARNING: $@"; }
+error() { log "ERROR: $@"; }
 
 # Print the remote URL for the current branch
 #
@@ -33,7 +39,32 @@ get_vcs_ref() {
     ) | head -1
 }
 
+# Print the name for the current branch
+#
+# $1 : git checkout directory
+get_source_branch() { git -C "$1" rev-parse --abbrev-ref HEAD; }
+
+# Print the name for docker tag
+#
+# $1 : git checkout directory
+get_docker_tag() { get_source_branch "$1" | sed 's/^master$/latest/'; }
+
 env | sort
+
+if ! [ -n "${DOCKER_REPO:-}" ]; then
+    export DOCKER_REPO="${DOCKER_REPO:-$(basename "${project_dir}")}"
+    warning "defaulting DOCKER_REPO: ${DOCKER_REPO}"
+fi
+
+if ! [ -n "${DOCKER_TAG:-}" ]; then
+    export DOCKER_TAG="${DOCKER_TAG:-$(get_docker_tag "${project_dir}")}"
+    warning "defaulting DOCKER_TAG: ${DOCKER_TAG}"
+fi
+
+if ! [ -n "${IMAGE_NAME:-}" ]; then
+    export IMAGE_NAME="${IMAGE_NAME:-${DOCKER_REPO}:${DOCKER_TAG}}"
+    warning "defaulting IMAGE_NAME: ${IMAGE_NAME}"
+fi
 
 # https://medium.com/microscaling-systems/labelling-automated-builds-on-docker-hub-f3d073fb8e1
 docker image build \
