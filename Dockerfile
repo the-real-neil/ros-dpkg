@@ -38,6 +38,7 @@ RUN set -euvx \
        git-buildpackage \
        libdistro-info-perl \
        libfile-fcntllock-perl \
+       liblz4-tool \
        libparse-debcontrol-perl \
        linux-image-generic \
        udev \
