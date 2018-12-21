@@ -49,28 +49,37 @@ get_source_branch() { git -C "$1" rev-parse --abbrev-ref HEAD; }
 # $1 : git checkout directory
 get_docker_tag() { get_source_branch "$1" | sed 's/^master$/latest/'; }
 
-env | sort
+export BUILD_DATE="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
 
-if ! [ -n "${DOCKER_REPO:-}" ]; then
-    export DOCKER_REPO="${DOCKER_REPO:-$(basename "${project_dir}")}"
-    warning "defaulting DOCKER_REPO: ${DOCKER_REPO}"
+if ! [ -n "${VCS_REF:-}" ]; then
+    export VCS_REF="$(get_vcs_ref "${project_dir}")"
+    warning "defaulting VCS_REF: ${VCS_REF}"
 fi
 
-if ! [ -n "${DOCKER_TAG:-}" ]; then
-    export DOCKER_TAG="${DOCKER_TAG:-$(get_docker_tag "${project_dir}")}"
-    warning "defaulting DOCKER_TAG: ${DOCKER_TAG}"
+if ! [ -n "${VCS_URL:-}" ]; then
+    export VCS_URL="$(get_vcs_url "${project_dir}")"
+    warning "defaulting VCS_URL: ${VCS_URL}"
 fi
 
 if ! [ -n "${IMAGE_NAME:-}" ]; then
+    if ! [ -n "${DOCKER_REPO:-}" ]; then
+        export DOCKER_REPO="${DOCKER_REPO:-$(basename "${project_dir}")}"
+        warning "defaulting DOCKER_REPO: ${DOCKER_REPO}"
+    fi
+
+    if ! [ -n "${DOCKER_TAG:-}" ]; then
+        export DOCKER_TAG="${DOCKER_TAG:-$(get_docker_tag "${project_dir}")}"
+        warning "defaulting DOCKER_TAG: ${DOCKER_TAG}"
+    fi
     export IMAGE_NAME="${IMAGE_NAME:-${DOCKER_REPO}:${DOCKER_TAG}}"
     warning "defaulting IMAGE_NAME: ${IMAGE_NAME}"
 fi
 
+env | sort
+
 # https://medium.com/microscaling-systems/labelling-automated-builds-on-docker-hub-f3d073fb8e1
+# https://stackoverflow.com/questions/41898503/loop-over-environment-variables-in-posix-sh/41914583#41914583
 docker image build \
-    $(env | sed -nr 's|^([^=]+).*$|--build-arg \1|gp') \
-    --build-arg BUILD_DATE="$(date -u +"%Y-%m-%dT%H:%M:%SZ")" \
-    --build-arg VCS_REF="$(get_vcs_ref "${project_dir}")" \
-    --build-arg VCS_URL="$(get_vcs_url "${project_dir}")" \
-    --tag "${IMAGE_NAME:-$(basename "${project_dir}")}" \
+    $(awk 'END{for(var in ENVIRON){print var}}' </dev/null | sort | xargs -n1 echo "--build-arg") \
+    --tag "${IMAGE_NAME}" \
     "${project_dir}"
