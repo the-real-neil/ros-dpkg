@@ -4,13 +4,14 @@ services:
   - docker:dind
 
 variables:
+  BUILD_CODE: "${CI_JOB_ID}"
+  DOCKER_REPO: "${CI_REGISTRY_IMAGE}"
+  DOCKER_TAG: "${CI_COMMIT_REF_NAME}"
   # https://docs.gitlab.com/ee/ci/git_submodules.html#using-git-submodules-in-your-ci-jobs
   # https://docs.gitlab.com/ee/ci/yaml/README.html#git-submodule-strategy
   GIT_SUBMODULE_STRATEGY: "recursive"
   VCS_REF: "${CI_COMMIT_SHA}"
   VCS_URL: "${CI_PROJECT_URL}"
-  DOCKER_REPO: "${CI_REGISTRY_IMAGE}"
-  DOCKER_TAG: "${CI_COMMIT_REF_NAME}"
 
 build_and_push:
   script:
