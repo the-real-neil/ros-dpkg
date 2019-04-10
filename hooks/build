@@ -61,12 +61,22 @@ if ! [ -n "${VCS_URL:-}" ]; then
     warning "defaulting VCS_URL: ${VCS_URL}"
 fi
 
-if ! [ -n "${IMAGE_NAME:-}" ]; then
+if [ -n "${IMAGE_NAME:-}" ]; then
+    # from IMAGE_NAME to DOCKER_{REPO,TAG}
     if ! [ -n "${DOCKER_REPO:-}" ]; then
-        export DOCKER_REPO="${DOCKER_REPO:-$(basename "${project_dir}")}"
+        export DOCKER_REPO="${IMAGE_NAME%:*}"
         warning "defaulting DOCKER_REPO: ${DOCKER_REPO}"
     fi
-
+    if ! [ -n "${DOCKER_TAG:-}" ]; then
+        export DOCKER_TAG="${IMAGE_NAME#*:}"
+        warning "defaulting DOCKER_TAG: ${DOCKER_TAG}"
+    fi
+else
+    # from DOCKER_{REPO,TAG} to IMAGE_NAME
+    if ! [ -n "${DOCKER_REPO:-}" ]; then
+        export DOCKER_REPO="$(basename "${project_dir}")"
+        warning "defaulting DOCKER_REPO: ${DOCKER_REPO}"
+    fi
     if ! [ -n "${DOCKER_TAG:-}" ]; then
         export DOCKER_TAG="${DOCKER_TAG:-$(get_docker_tag "${project_dir}")}"
         warning "defaulting DOCKER_TAG: ${DOCKER_TAG}"
