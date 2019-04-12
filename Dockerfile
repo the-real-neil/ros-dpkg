@@ -31,6 +31,7 @@ RUN set -euvx \
   && echo \
   && echo "install tools for package building" \
   && apt-get -y --no-install-recommends install \
+       clang-6.0 \
        curl \
        devscripts \
        dpkg-dev \
@@ -41,11 +42,16 @@ RUN set -euvx \
        libdistro-info-perl \
        libfile-fcntllock-perl \
        liblz4-tool \
+       libomp-dev \
        libparse-debcontrol-perl \
        linux-image-generic \
        python-pip \
        udev \
        xz-utils \
+  && echo \
+  && echo "update-alternatives clang-6.0" \
+  && update-alternatives --install /usr/bin/c++ c++ "$(command -v clang++-6.0)" 1000 \
+  && update-alternatives --install /usr/bin/cc  cc  "$(command -v clang-6.0)"   1000 \
   && echo \
   && echo "install catkin-tools (because https://github.com/catkin/catkin_tools/pull/511)" \
   && curl -fsSLo catkin_tools-master.tar.gz https://github.com/catkin/catkin_tools/archive/master.tar.gz \
