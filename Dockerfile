@@ -15,7 +15,6 @@ ARG BUILD_CODE="default-build-code"
 WORKDIR /tmp/${BUILD_CODE}
 COPY ./scrippies/configure-apt .
 COPY ./scrippies/configure-rosdep .
-COPY ./scrippies/inject-librscalibrationapi .
 COPY ./scrippies/strip-maint .
 RUN set -euvx \
   && echo \
@@ -54,11 +53,6 @@ RUN set -euvx \
   && ( cd catkin_tools-master \
        && pip install -r requirements.txt --upgrade \
        && python setup.py install --record install_manifest.txt ) \
-  && echo \
-  && echo "check librscalibrationapi" \
-  && apt-cache show librscalibrationapi \
-  || ( ./inject-librscalibrationapi \
-       && ./configure-rosdep "file:///var/packages/Packages" ) \
   && echo \
   && echo "configure rosdep realsense" \
   && ./configure-rosdep \
