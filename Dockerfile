@@ -45,6 +45,7 @@ RUN set -euvx \
        libparse-debcontrol-perl \
        linux-image-generic \
        python-catkin-tools \
+       symlinks \
        udev \
        xz-utils \
   && echo \
