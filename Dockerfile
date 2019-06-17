@@ -14,7 +14,6 @@ LABEL \
 ARG BUILD_CODE="default-build-code"
 WORKDIR /tmp/${BUILD_CODE}
 COPY ./scrippies/configure-apt .
-COPY ./scrippies/strip-maint .
 RUN set -euvx \
   && echo \
   && echo "make this container behave like a chroot" \
@@ -52,8 +51,5 @@ RUN set -euvx \
   && echo "update-alternatives clang-6.0" \
   && update-alternatives --install /usr/bin/c++ c++ "$(command -v clang++-6.0)" 1000 \
   && update-alternatives --install /usr/bin/cc  cc  "$(command -v clang-6.0)"   1000 \
-  && echo \
-  && echo "install strip-maint" \
-  && ./strip-maint -I "$(dirname "$(command -v switch_root)")" \
   && echo \
   && echo "done"
