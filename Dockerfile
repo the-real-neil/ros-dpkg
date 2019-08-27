@@ -35,6 +35,7 @@ RUN set -euvx \
        dpkg-dev \
        equivs \
        fakeroot \
+       faketime \
        git \
        git-buildpackage \
        libdistro-info-perl \
