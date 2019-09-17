@@ -14,6 +14,8 @@ LABEL \
 ARG BUILD_CODE="default-build-code"
 WORKDIR /tmp/${BUILD_CODE}
 COPY ./scrippies/configure-apt .
+COPY ./scrippies/install-nodejs .
+COPY ./scrippies/install-yarn .
 RUN set -euvx \
   && echo \
   && echo "make this container behave like a chroot" \
@@ -52,5 +54,11 @@ RUN set -euvx \
   && echo "update-alternatives clang-6.0" \
   && update-alternatives --install /usr/bin/c++ c++ "$(command -v clang++-6.0)" 1000 \
   && update-alternatives --install /usr/bin/cc  cc  "$(command -v clang-6.0)"   1000 \
+  && echo \
+  && echo "installing nodejs" \
+  && ./install-nodejs \
+  && echo \
+  && echo "installing yarn" \
+  && ./install-yarn \
   && echo \
   && echo "done"
