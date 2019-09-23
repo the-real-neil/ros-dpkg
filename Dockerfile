@@ -35,6 +35,7 @@ RUN set -euvx \
        clang-6.0 \
        curl \
        devscripts \
+       dh-systemd \
        dpkg-dev \
        equivs \
        fakeroot \
