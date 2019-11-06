@@ -32,6 +32,7 @@ RUN set -euvx \
   && echo "install tools for package building" \
   && apt-get -y --no-install-recommends install \
        apt-transport-https \
+       bsdtar \
        clang-6.0 \
        curl \
        devscripts \
