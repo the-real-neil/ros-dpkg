@@ -15,7 +15,6 @@ ARG BUILD_CODE="default-build-code"
 WORKDIR /tmp/${BUILD_CODE}
 COPY ./scrippies/configure-apt .
 COPY ./scrippies/install-nodejs .
-COPY ./scrippies/install-yarn .
 RUN set -euvx \
   && echo \
   && echo "make this container behave like a chroot" \
@@ -60,8 +59,5 @@ RUN set -euvx \
   && echo \
   && echo "installing nodejs" \
   && ./install-nodejs \
-  && echo \
-  && echo "installing yarn" \
-  && ./install-yarn \
   && echo \
   && echo "done"
