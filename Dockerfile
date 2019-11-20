@@ -57,6 +57,9 @@ RUN set -euvx \
   && update-alternatives --install /usr/bin/c++ c++ "$(command -v clang++-6.0)" 1000 \
   && update-alternatives --install /usr/bin/cc  cc  "$(command -v clang-6.0)"   1000 \
   && echo \
+  && echo "rosdep update" \
+  && rosdep update --verbose \
+  && echo \
   && echo "installing nodejs" \
   && ./install-nodejs \
   && echo \
