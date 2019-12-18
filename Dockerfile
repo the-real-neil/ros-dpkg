@@ -21,16 +21,17 @@ RUN set -euvx \
   && dpkg-divert --local --rename /usr/bin/ischroot \
   && ln -vsf /bin/true /usr/bin/ischroot \
   && echo \
-  && echo "configure apt" \
+  && echo "install packages for configure-apt" \
+  && apt-get -y update \
+  && apt-get -y --no-install-recommends install apt-transport-https gnupg \
+  && echo \
+  && echo "configure-apt" \
   && find /etc/apt/sources.list.d /var/lib/apt/lists -type f -print -delete \
   && ./configure-apt \
   && echo \
-  && echo "update apt" \
+  && echo "install packages for building" \
   && apt-get -y update \
-  && echo \
-  && echo "install tools for package building" \
   && apt-get -y --no-install-recommends install \
-       apt-transport-https \
        bsdtar \
        clang-6.0 \
        curl \
