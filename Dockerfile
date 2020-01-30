@@ -48,6 +48,7 @@ RUN set -euvx \
        liblz4-tool \
        libomp-dev \
        libparse-debcontrol-perl \
+       lintian \
        linux-image-generic \
        python-catkin-tools \
        symlinks \
