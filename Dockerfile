@@ -49,7 +49,6 @@ RUN set -euvx \
        libomp-dev \
        libparse-debcontrol-perl \
        linux-image-generic \
-       nodejs \
        python-catkin-tools \
        symlinks \
        udev \
