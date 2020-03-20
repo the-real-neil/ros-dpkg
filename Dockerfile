@@ -26,7 +26,7 @@ RUN set -euvx \
   && apt-get -y --no-install-recommends install apt-transport-https gnupg \
   && echo \
   && echo "configure-apt" \
-  && find /etc/apt/sources.list.d /var/lib/apt/lists -type f -print -delete \
+  && find /etc/apt/sources.list /etc/apt/sources.list.d /var/lib/apt/lists -type f -print -delete \
   && ./configure-apt \
   && echo \
   && echo "install packages for building" \
