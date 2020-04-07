@@ -1,0 +1,143 @@
+#!/bin/sh
+
+set -euvx
+
+readonly this="$(readlink -f "$0")"
+readonly here="$(dirname "${this}")"
+readonly whatami="$(basename "${this}")"
+readonly tmpdir="$(mktemp -dt "${whatami}.XXXXXX")"
+
+log() { echo "${whatami}[$$]: $*" >&2; }
+error() { log "ERROR: $*"; }
+warning() { log "WARNING: $*"; }
+info() { log "INFO: $*"; }
+
+die() {
+    error "$*"
+    usage >&2
+    exit 1
+}
+
+cleanup() {
+    status="$?"
+    rm -rf "${tmpdir}"
+    if command -v docker >/dev/null 2>&1; then
+        docker system prune --force --filter until=6h >&2 || true
+    fi
+    return "${status}"
+}
+
+usage() {
+    cat <<EOF
+Usage: $0 [OPTION]... BUILD_SCRIPT ORIGTAR
+Test all images with the given build script and original tarball.
+
+Options:
+
+    -h    print usage and exit
+
+Notes:
+
+    * BUILD_SCRIPT must suppport the following options:
+
+        * -C WORKDIR
+
+        * -D DISTRIBUTION
+
+        * -R ROS_DISTRO
+
+EOF
+}
+
+is_good_origtar() {
+    # shellcheck disable=SC2039
+    local regex='^[a-z0-9][a-z0-9.+-]+_[0-9]+([.][0-9]+){2}-[0-9]+-g[0-9a-f]{7,40}[.]orig[.]tar([.](gz|bz2|xz))?$'
+    if ! basename "$1" | grep -Eq "${regex}"; then
+        error "bad file name: $1"
+        return 1
+    fi
+    if ! file -bz "$1" | grep -q '^POSIX tar archive'; then
+        error "bad file type: $(file -bz "$1")"
+        return 1
+    fi
+    return 0
+}
+
+################################################################################
+
+trap cleanup EXIT
+export TMPDIR="${tmpdir}"
+export LC_ALL=C
+
+while getopts ":h" opt; do
+    case "${opt}" in
+        h)
+            usage
+            exit 0
+            ;;
+        :) die "missing argument: -${OPTARG}" ;;
+        \?) die "bad option: -${OPTARG}" ;;
+    esac
+done
+shift "$((OPTIND - 1))"
+
+if ! [ 2 -eq "$#" ]; then
+    die "bad args"
+fi
+
+# build_script
+if ! build_script="$(readlink -f "$1")"; then
+    die "missing path: $1"
+fi
+if ! [ -x "${build_script}" ]; then
+    die "not an executable: ${build_script}"
+fi
+readonly build_script="${build_script}"
+info "build_script: ${build_script}"
+
+# origtar
+if ! origtar="$(readlink -f "$2")"; then
+    die "missing path: $2"
+fi
+if ! [ -f "${origtar}" ]; then
+    die "not a file: ${origtar}"
+fi
+if ! is_good_origtar "${origtar}"; then
+    die "bad origtar: ${origtar}"
+fi
+readonly origtar="${origtar}"
+info "origtar: ${origtar}"
+readonly origname="$(basename "${origtar}" | grep -Eo '^[a-z0-9][a-z0-9.+-]+_[0-9]+([.][0-9]+){2}-[0-9]+-g[0-9a-f]{7,40}')"
+info "origname: ${origname}"
+
+################################################################################
+
+readonly branch_list="$(mktemp -t branch_list.XXXXXX)"
+git -C "${here}" branch -a \
+    | sed -nr 's|^  remotes/[^/]+/([[:graph:]]+)$|\1|gp' \
+    | sed 's/master/latest/' >"${branch_list}"
+sort -uo "${branch_list}" "${branch_list}"
+sed -i '/^latest$/d' "${branch_list}"
+cat -n "${branch_list}" >&2
+
+# assumes every branch name is a ros_distro
+cat <"${branch_list}" | while read -r branch; do
+    ros_distro="${branch}"
+    # TODO(neil): put the colons back in when (if) rosdep fixes its problems
+    # with colons.
+    #
+    # https://github.com/ros-infrastructure/rosdep/issues/744 : "rosdep hates
+    # colons in catkin source space path"
+    ros_distro_dir="$(mktemp -d "${ros_distro}.$(date -u +"%Y%m%dT%H%M%SZ").XXXXXX")"
+    origdir="${ros_distro_dir}/${origname}"
+    mkdir -vp "${origdir}"
+    tar -C "${origdir}" -xf "${origtar}"
+    # `</dev/null` because something in there is reading stdin and draining the
+    # branch_list prematurely.
+    #
+    # https://stackoverflow.com/questions/23938323/loop-only-iterates-once-with-ssh-in-the-body
+    "${build_script}" -C "${origdir}" -R "${ros_distro}" </dev/null
+    info "\$?: $?"
+done
+
+exit "$?"
