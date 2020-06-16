@@ -32,7 +32,6 @@ RUN set -euvx \
   && echo "install packages for building" \
   && apt-get -y update \
   && apt-get -y --no-install-recommends install \
-       bsdtar \
        clang-6.0 \
        curl \
        devscripts \
@@ -43,6 +42,7 @@ RUN set -euvx \
        faketime \
        git \
        git-buildpackage \
+       libarchive-tools \
        libdistro-info-perl \
        libfile-fcntllock-perl \
        liblz4-tool \
