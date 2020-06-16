@@ -50,10 +50,12 @@ RUN set -euvx \
        libparse-debcontrol-perl \
        lintian \
        linux-image-generic \
-       python-catkin-tools \
        symlinks \
        udev \
        xz-utils \
+  && echo \
+  && echo "install catkin" \
+  && apt-get -y install python3-catkin-tools || apt-get -y install python-catkin-tools || exit 1 \
   && echo \
   && echo "update-alternatives clang-6.0" \
   && update-alternatives --install /usr/bin/c++ c++ "$(command -v clang++-6.0)" 1000 \
