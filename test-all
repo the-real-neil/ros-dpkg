@@ -46,6 +46,12 @@ Notes:
 
         * -R ROS_DISTRO
 
+Examples:
+
+    \$ $0 \\
+        ~/code/build-rapidplan-ci/docker-ros-buildpackage \\
+        /tmp/rapidplan_1.3.0-361-g166f2994a.orig.tar.xz
+
 EOF
 }
 
