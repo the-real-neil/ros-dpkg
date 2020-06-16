@@ -9,7 +9,7 @@ ros-dpkg
 
 [![Docker Build Status](https://img.shields.io/docker/build/rubicks/ros-dpkg.svg)][hub]
 
-Make ya debs fuh ROS, kid.
+Make ya debs fuh ROS, kehd.
 
 # What?
 
