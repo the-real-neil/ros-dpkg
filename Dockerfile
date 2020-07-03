@@ -32,7 +32,7 @@ RUN set -euvx \
   && echo "install packages for building" \
   && apt-get -y update \
   && apt-get -y --no-install-recommends install \
-       clang-6.0 \
+       clang-9 \
        curl \
        devscripts \
        dh-systemd \
@@ -57,9 +57,9 @@ RUN set -euvx \
   && echo "install catkin" \
   && apt-get -y install python3-catkin-tools || apt-get -y install python-catkin-tools || exit 1 \
   && echo \
-  && echo "update-alternatives clang-6.0" \
-  && update-alternatives --install /usr/bin/c++ c++ "$(command -v clang++-6.0)" 1000 \
-  && update-alternatives --install /usr/bin/cc  cc  "$(command -v clang-6.0)"   1000 \
+  && echo "update-alternatives clang-9" \
+  && update-alternatives --install /usr/bin/c++ c++ "$(command -v clang++-9)" 1000 \
+  && update-alternatives --install /usr/bin/cc  cc  "$(command -v clang-9)"   1000 \
   && echo \
   && echo "freeze rosdistro" \
   && curl -fsSL https://github.com/ros/rosdistro/archive/master.tar.gz \
