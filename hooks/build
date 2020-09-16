@@ -19,11 +19,14 @@ error() { log "ERROR: $*"; }
 # $1 : git work tree
 detect_vcs_url() {
     # shellcheck disable=SC2039
-    local upstream_remote=""
-    if ! upstream_remote="$(git -C "$1" remote show)"; then
+    local upstream_branch=""
+    # shellcheck disable=SC1083
+    if ! upstream_branch="$(git -C "$1" rev-parse --abbrev-ref @{upstream})"; then
         error "FAILURE: git -C $1 remote show"
         return 1
     fi
+    # shellcheck disable=SC2039
+    local upstream_remote="${upstream_branch%%/*}"
     # shellcheck disable=SC2039
     local result=""
     if ! result="$(git -C "$1" config "remote.${upstream_remote}.url")"; then
