@@ -3,15 +3,18 @@
 ARG DOCKER_TAG="latest"
 FROM ros:${DOCKER_TAG}
 ENV ROSDISTRO_INDEX_URL="file:///etc/ros/index-v4.yaml"
-ARG BUILD_DATE
-ARG VCS_REF
 ARG VCS_URL
+ARG VCS_REF
+ARG SOURCE_DATE_EPOCH
+ARG SOURCE_DATE
+ARG BUILD_DATE
 LABEL \
-  org.label-schema.schema-version="1.0" \
-  org.label-schema.build-date="${BUILD_DATE}" \
-  org.label-schema.vcs-ref="${VCS_REF}" \
-  org.label-schema.vcs-url="${VCS_URL}" \
-  maintainer="Neil Roza <neil@rtr.ai>"
+    org.label-schema.schema-version="1.0" \
+    org.label-schema.vcs-url="${VCS_URL}" \
+    org.label-schema.vcs-ref="${VCS_REF}" \
+    org.label-schema.source-date-epoch="${SOURCE_DATE_EPOCH}" \
+    org.label-schema.source-date="${SOURCE_DATE}" \
+    org.label-schema.build-date="${BUILD_DATE}"
 ARG BUILD_CODE="default-build-code"
 WORKDIR /tmp/${BUILD_CODE}
 RUN set -euvx \
