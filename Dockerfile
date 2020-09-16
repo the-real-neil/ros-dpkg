@@ -14,24 +14,16 @@ LABEL \
   maintainer="Neil Roza <neil@rtr.ai>"
 ARG BUILD_CODE="default-build-code"
 WORKDIR /tmp/${BUILD_CODE}
-COPY ./scrippies/configure-apt .
 RUN set -euvx \
   && echo \
   && echo "make this container behave like a chroot" \
   && dpkg-divert --local --rename /usr/bin/ischroot \
   && ln -vsf /bin/true /usr/bin/ischroot \
   && echo \
-  && echo "install packages for configure-apt" \
-  && apt-get -y update \
-  && apt-get -y --no-install-recommends install apt-transport-https gnupg \
-  && echo \
-  && echo "configure-apt" \
-  && find /etc/apt/sources.list /etc/apt/sources.list.d /var/lib/apt/lists -type f -print -delete \
-  && ./configure-apt \
-  && echo \
   && echo "install packages for building" \
   && apt-get -y update \
   && apt-get -y --no-install-recommends install \
+       apt-cudf \
        clang-6.0 \
        curl \
        devscripts \
