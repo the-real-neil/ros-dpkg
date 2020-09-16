@@ -9,18 +9,29 @@ readonly here="$(dirname "${this}")"
 readonly project_dir="$(dirname "${here}")"
 readonly whatami="$(basename "${project_dir}").$(basename "${here}").$(basename "${this}")"
 
-log() { echo "${whatami}[$$]: $@" >&2; }
-info() { log "INFO: $@"; }
-warning() { log "WARNING: $@"; }
-error() { log "ERROR: $@"; }
+log() { echo "${whatami}[$$]: $*" >&2; }
+info() { log "INFO: $*"; }
+warning() { log "WARNING: $*"; }
+error() { log "ERROR: $*"; }
 
 # Print the remote URL for the current branch
 #
-# $1 : git checkout directory
-get_vcs_url() {
-    git -C "$1" rev-parse --abbrev-ref --symbolic-full-name @{u} \
-        | grep -Eo '^[^/]+' \
-        | xargs -I{} git -C "$1" config "remote.{}.url"
+# $1 : git work tree
+detect_vcs_url() {
+    # shellcheck disable=SC2039
+    local upstream_remote=""
+    if ! upstream_remote="$(git -C "$1" remote show)"; then
+        error "FAILURE: git -C $1 remote show"
+        return 1
+    fi
+    # shellcheck disable=SC2039
+    local result=""
+    if ! result="$(git -C "$1" config "remote.${upstream_remote}.url")"; then
+        error "FAILURE: git -C $1 config remote.${upstream_remote}.url"
+        return 1
+    fi
+    echo "${result}"
+    return 0
 }
 
 # Print a sha1 for the current state of the checkout.
@@ -31,12 +42,30 @@ get_vcs_url() {
 # case we want get sha1sum of the HEAD. We attempt to print both, but take only
 # the first.
 #
-# $1 : git checkout directory
-get_vcs_ref() {
-    (
-        git -C "$1" stash create
-        git -C "$1" rev-parse HEAD
-    ) | head -1
+# $1 : git work tree
+detect_vcs_ref() {
+    # shellcheck disable=SC2039
+    local result=""
+    if ! result="$(git -C "$1" stash create)"; then
+        error "FAILURE; git -C $1 stash create"
+        return 1
+    fi
+    if [ -n "${result}" ]; then
+        echo "${result}"
+        return 0
+    fi
+    if ! result="$(git -C "$1" rev-parse HEAD)"; then
+        error "FAILURE; git -C $1 rev-parse HEAD"
+        return 1
+    fi
+    echo "${result}"
+    return 0
+}
+
+# $1 : git work tree
+# $2 : git treeish
+detect_source_date_epoch() {
+    git -C "$1" show -s --format="%ct" "$2"
 }
 
 # Print the name for the current branch
@@ -49,36 +78,67 @@ get_source_branch() { git -C "$1" rev-parse --abbrev-ref HEAD; }
 # $1 : git checkout directory
 get_docker_tag() { get_source_branch "$1" | sed 's/^master$/latest/'; }
 
-export BUILD_DATE="$(date -u +"%Y-%m-%dT%H:%M:%SZ")"
+################################################################################
 
-if ! [ -n "${VCS_REF:-}" ]; then
-    export VCS_REF="$(get_vcs_ref "${project_dir}")"
-    warning "defaulting VCS_REF: ${VCS_REF}"
+env | sort
+
+# VCS_URL
+if [ -n "${VCS_URL:-}" ]; then
+    info "VCS_URL: ${VCS_URL}"
+else
+    VCS_URL="$(detect_vcs_url "${project_dir}")"
+    export VCS_URL
+    warning "detected VCS_URL: ${VCS_URL}"
 fi
 
-if ! [ -n "${VCS_URL:-}" ]; then
-    export VCS_URL="$(get_vcs_url "${project_dir}")"
-    warning "defaulting VCS_URL: ${VCS_URL}"
+# VCS_REF
+if [ -n "${VCS_REF:-}" ]; then
+    info "VCS_REF: ${VCS_REF}"
+else
+    VCS_REF="$(detect_vcs_ref "${project_dir}")"
+    export VCS_REF
+    warning "detected VCS_REF: ${VCS_REF}"
 fi
+
+# SOURCE_DATE_EPOCH
+if [ -n "${SOURCE_DATE_EPOCH:-}" ]; then
+    info "SOURCE_DATE_EPOCH: ${SOURCE_DATE_EPOCH}"
+else
+    SOURCE_DATE_EPOCH="$(detect_source_date_epoch "${project_dir}" "${VCS_REF}")"
+    export SOURCE_DATE_EPOCH
+    warning "detected SOURCE_DATE_EPOCH: ${SOURCE_DATE_EPOCH}"
+fi
+
+# SOURCE_DATE
+SOURCE_DATE="$(date -uIseconds -d@"${SOURCE_DATE_EPOCH}")"
+export SOURCE_DATE
+info "SOURCE_DATE: ${SOURCE_DATE}"
+
+# BUILD_DATE
+BUILD_DATE="$(date -uIseconds)"
+export BUILD_DATE
+info "BUILD_DATE: ${BUILD_DATE}"
 
 if [ -n "${IMAGE_NAME:-}" ]; then
     # from IMAGE_NAME to DOCKER_{REPO,TAG}
-    if ! [ -n "${DOCKER_REPO:-}" ]; then
+    if [ -z "${DOCKER_REPO:-}" ]; then
         export DOCKER_REPO="${IMAGE_NAME%:*}"
         warning "defaulting DOCKER_REPO: ${DOCKER_REPO}"
     fi
-    if ! [ -n "${DOCKER_TAG:-}" ]; then
+    if [ -z "${DOCKER_TAG:-}" ]; then
         export DOCKER_TAG="${IMAGE_NAME#*:}"
         warning "defaulting DOCKER_TAG: ${DOCKER_TAG}"
     fi
 else
     # from DOCKER_{REPO,TAG} to IMAGE_NAME
-    if ! [ -n "${DOCKER_REPO:-}" ]; then
-        export DOCKER_REPO="$(basename "${project_dir}")"
+    if [ -z "${DOCKER_REPO:-}" ]; then
+        DOCKER_REPO="$(basename "${project_dir}")"
+        export DOCKER_REPO
         warning "defaulting DOCKER_REPO: ${DOCKER_REPO}"
     fi
-    if ! [ -n "${DOCKER_TAG:-}" ]; then
-        export DOCKER_TAG="${DOCKER_TAG:-$(get_docker_tag "${project_dir}")}"
+    if [ -z "${DOCKER_TAG:-}" ]; then
+        DOCKER_TAG="$(get_docker_tag "${project_dir}")"
+        export DOCKER_TAG
         warning "defaulting DOCKER_TAG: ${DOCKER_TAG}"
     fi
     export IMAGE_NAME="${IMAGE_NAME:-${DOCKER_REPO}:${DOCKER_TAG}}"
@@ -89,6 +149,7 @@ env | sort
 
 # https://medium.com/microscaling-systems/labelling-automated-builds-on-docker-hub-f3d073fb8e1
 # https://stackoverflow.com/questions/41898503/loop-over-environment-variables-in-posix-sh/41914583#41914583
+# shellcheck disable=SC2046
 docker image build \
     $(awk 'END{for(var in ENVIRON){print var}}' </dev/null | sort | xargs -n1 echo "--build-arg") \
     --tag "${IMAGE_NAME}" \
