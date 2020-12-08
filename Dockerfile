@@ -41,7 +41,6 @@ RUN set -euvx \
        libdistro-info-perl \
        libfile-fcntllock-perl \
        liblz4-tool \
-       libomp-dev \
        libparse-debcontrol-perl \
        lintian \
        linux-image-generic \
