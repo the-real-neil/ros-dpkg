@@ -49,9 +49,6 @@ RUN set -euvx \
        udev \
        xz-utils \
   && echo \
-  && echo "install catkin" \
-  && apt-get -y install python3-catkin-tools || apt-get -y install python-catkin-tools || exit 1 \
-  && echo \
   && echo "update-alternatives clang-9" \
   && update-alternatives --install /usr/bin/c++ c++ "$(command -v clang++-9)" 1000 \
   && update-alternatives --install /usr/bin/cc  cc  "$(command -v clang-9)"   1000 \
