@@ -19,6 +19,9 @@ ARG BUILD_CODE="default-build-code"
 WORKDIR /tmp/${BUILD_CODE}
 RUN set -euvx \
   && echo \
+  && echo "work around https://github.com/osrf/docker_images/issues/535" \
+  && apt-key adv --keyserver keyserver.ubuntu.com --recv-key C1CF6E31E6BADE8868B172B4F42ED6FBAB17C654 \
+  && echo \
   && echo "make this container behave like a chroot" \
   && dpkg-divert --local --rename /usr/bin/ischroot \
   && ln -vsf /bin/true /usr/bin/ischroot \
