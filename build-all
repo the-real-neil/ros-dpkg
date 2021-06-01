@@ -1,11 +1,17 @@
 #!/bin/sh
 
+# ros-dpkg/build-all
+
 set -euvx
 
-readonly this="$(readlink -f "$0")"
-readonly here="$(dirname "${this}")"
-readonly whatami="$(basename "${this}")"
-readonly tmpdir="$(mktemp -dt "${whatami}.XXXXXX")"
+this="$(realpath "$0")"
+readonly this="${this}"
+here="$(dirname "${this}")"
+readonly here="${here}"
+whatami="$(basename "${this}")"
+readonly whatami="${whatami}"
+tmpdir="$(mktemp -dt "${whatami}.XXXXXX")"
+readonly tmpdir="${tmpdir}"
 
 log() { echo "${whatami}[$$]: $*" >&2; }
 error() { log "ERROR: $*"; }
@@ -20,15 +26,16 @@ die() {
 
 cleanup() {
     status="$?"
-    rm -rf "${tmpdir}"
     if command -v docker >/dev/null 2>&1; then
         docker system prune --force --filter until=6h >&2 || true
     fi
+    rm -rf "${tmpdir}"
     return "${status}"
 }
 
 usage() {
     cat <<EOF
+
 Usage: $0 [OPTION]...
 Build all the things.
 
@@ -38,6 +45,7 @@ EOF
 ################################################################################
 
 trap cleanup EXIT
+chmod 1777 "${tmpdir}"
 export TMPDIR="${tmpdir}"
 export LC_ALL=C
 
@@ -46,8 +54,8 @@ git -C "${here}" branch -a \
     | sed 's/master/latest/' \
     | sort -u \
     | while read -r brunch; do
-    export IMAGE_NAME="registry.gitlab.com/realtime-robotics/ros-dpkg:${brunch}"
-    "${here}/hooks/build"
-done
+        export IMAGE_NAME="registry.gitlab.com/realtime-robotics/ros-dpkg:${brunch}"
+        "${here}/hooks/build"
+    done
 
 exit "$?"
