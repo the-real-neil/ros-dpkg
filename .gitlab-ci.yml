@@ -19,11 +19,10 @@ variables:
   GIT_SUBMODULE_STRATEGY: "recursive"
 
 stages:
-  - build
-  - push
+  - buildandpush
 
-build1:
-  stage: build
+buildandpush1:
+  stage: buildandpush
   tags:
     - docker
   script:
@@ -32,11 +31,5 @@ build1:
     - docker info
     - apk add -U git
     - ./hooks/build
-
-push1:
-  stage: push
-  tags:
-    - docker
-  script:
     - docker login -u "${CI_REGISTRY_USER}" -p "${CI_REGISTRY_PASSWORD}" "${CI_REGISTRY}"
     - docker image push "${DOCKER_REPO}:${DOCKER_TAG}"
