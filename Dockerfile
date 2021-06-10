@@ -2,6 +2,8 @@
 
 ARG DOCKER_TAG="latest"
 FROM ros:${DOCKER_TAG}
+SHELL [ "/bin/sh", "-c" ]
+ENTRYPOINT []
 ENV ROSDISTRO_INDEX_URL="file:///etc/ros/index-v4.yaml"
 ARG VCS_URL
 ARG VCS_REF
@@ -63,3 +65,4 @@ RUN set -euvx \
        /etc/ros/rosdep/sources.list.d/20-default.list \
   && echo \
   && echo "done"
+CMD sh
