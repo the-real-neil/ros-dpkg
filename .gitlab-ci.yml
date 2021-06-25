@@ -38,7 +38,7 @@ buildandpush1:
     - |
         set -euvx
         DISTRIBUTION="$(
-            docker container run --rm -it "${DOCKER_REPO}:${DOCKER_TAG}" sh <<'EOF'
+            docker container run --rm -i "${DOCKER_REPO}:${DOCKER_TAG}" sh <<'EOF'
         . /etc/os-release
         echo "${VERSION_CODENAME}"
         EOF
