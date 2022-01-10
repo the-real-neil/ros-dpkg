@@ -9,7 +9,6 @@ variables:
   # https://docs.gitlab.com/ee/ci/variables/predefined_variables.html
   VCS_URL: "${CI_PROJECT_URL}"
   VCS_REF: "${CI_COMMIT_SHA}"
-  # CI_COMMIT_TIMESTAMP is forthcoming?
   SOURCE_DATE: "${CI_COMMIT_TIMESTAMP}"
   BUILD_CODE: "${CI_JOB_ID}"
   DOCKER_REPO: "${CI_REGISTRY_IMAGE}"
@@ -19,10 +18,10 @@ variables:
   GIT_SUBMODULE_STRATEGY: "recursive"
 
 stages:
-  - buildandpush
+  - build
 
-buildandpush1:
-  stage: buildandpush
+build-push:
+  stage: build
   tags:
     - docker
   script:
@@ -31,7 +30,7 @@ buildandpush1:
         if [ "master" = "${CI_COMMIT_REF_NAME}" ]; then
             export DOCKER_TAG=latest
         fi
-    - env | sort
+    - export
     - docker info
     - apk add -U git
     - ./hooks/build
