@@ -4,113 +4,145 @@
 
 set -euvx
 
-readonly this="$(readlink -f "$0")"
-readonly here="$(dirname "${this}")"
-readonly project_dir="$(dirname "${here}")"
-readonly whatami="$(basename "${project_dir}").$(basename "${here}").$(basename "${this}")"
+export LC_ALL=C
+
+this="$(realpath "$0")"
+readonly this="${this}"
+here="$(dirname "${this}")"
+readonly here="${here}"
+project_dir="$(dirname "${here}")"
+readonly project_dir="${project_dir}"
+whatami="$(basename "${this}")"
+readonly whatami="${whatami}"
+tmpdir="$(
+    mktemp -dt "${whatami}.XXXXXX" | while read -r path; do
+        chmod 1777 "${path}"
+        echo "${path}"
+    done
+)"
+readonly tmpdir="${tmpdir}"
+export TMPDIR="${tmpdir}"
+
+cleanup() {
+    status="$?"
+    rm -rf "${tmpdir}" || true
+    docker system prune --force --filter until=6h >&2 || true
+    return "${status}"
+}
+trap cleanup EXIT
 
 log() { echo "${whatami}[$$]: $*" >&2; }
-info() { log "INFO: $*"; }
-warning() { log "WARNING: $*"; }
 error() { log "ERROR: $*"; }
+warning() { log "WARNING: $*"; }
+info() { log "INFO: $*"; }
+
+die() {
+    error "$@"
+    usage >&2
+    exit 1
+}
+
+usage() {
+    cat <<EOF
+
+Usage: $0 [OPTION]...
+Build docker image from git worktree.
+
+Options:
+
+    -h    print this usage and return success
+
+Examples:
+
+    \$ $0 -h
+
+    \$ $0
+
+EOF
+}
 
 # Print the remote URL for the current branch
 #
-# $1 : git work tree
-detect_vcs_url() {
-    # shellcheck disable=SC2039
-    local upstream_branch=""
-    # shellcheck disable=SC1083
-    if ! upstream_branch="$(git -C "$1" rev-parse --abbrev-ref @{upstream})"; then
-        error "FAILURE: git -C $1 remote show"
-        return 1
-    fi
-    # shellcheck disable=SC2039
-    local upstream_remote="${upstream_branch%%/*}"
-    # shellcheck disable=SC2039
-    local result=""
-    if ! result="$(git -C "$1" config "remote.${upstream_remote}.url")"; then
-        error "FAILURE: git -C $1 config remote.${upstream_remote}.url"
-        return 1
-    fi
-    echo "${result}"
-    return 0
-}
+# $1 : git worktree
+detect_vcs_url() (
+    # https://git-scm.com/docs/git-for-each-ref#Documentation/git-for-each-ref.txt-upstream
+    #
+    #     $ git branch --format='%(upstream)'
+    #     refs/remotes/gitlab/melodic
+    #     $ git branch --format='%(upstream:remotename)'
+    #     gitlab
+    #     $ git branch --format='%(upstream:remoteref)'
+    #     refs/heads/melodic
+    #
+    cd "$1"
+    git branch --format='%(upstream:remotename)' | xargs git remote get-url
+)
 
 # Print a sha1 for the current state of the checkout.
 #
-# When there are uncommitted changes, `git stash create` will make a commit
-# object (without storing it) and print it. When there are no uncommitted
-# changes, `git stash create` will print an empty string and succeed; in this
-# case we want get sha1sum of the HEAD. We attempt to print both, but take only
-# the first.
-#
-# $1 : git work tree
-detect_vcs_ref() {
-    # shellcheck disable=SC2039
-    local result=""
-    if ! result="$(git -C "$1" stash create)"; then
-        error "FAILURE; git -C $1 stash create"
-        return 1
-    fi
-    if [ -n "${result}" ]; then
-        echo "${result}"
-        return 0
-    fi
-    if ! result="$(git -C "$1" rev-parse HEAD)"; then
-        error "FAILURE; git -C $1 rev-parse HEAD"
-        return 1
-    fi
-    echo "${result}"
-    return 0
-}
-
-# $1 : git work tree
-# $2 : git treeish
-detect_source_date_epoch() {
-    git -C "$1" show -s --format="%ct" "$2"
-}
-
-# Print the name for the current branch
-#
-# $1 : git checkout directory
-get_source_branch() { git -C "$1" rev-parse --abbrev-ref HEAD; }
+# $1 : git worktree
+detect_vcs_ref() (
+    # https://git-scm.com/docs/git-stash#Documentation/git-stash.txt-create
+    #
+    # If uncommitted changes exist, then 'git stash create' will create a
+    # "stash entry" and print its object name; otherwise 'git stash create'
+    # will do nothing and print the empty string. In either case, 'git stash
+    # create' returns success.
+    #
+    # 'git rev-parse HEAD` (on success) prints the sha1sum of the current HEAD.
+    #
+    # We invoke both commands and take the first 40-hexit string we find.
+    cd "$1"
+    {
+        git stash create
+        git rev-parse HEAD
+    } | grep -Exom1 '[[:xdigit:]]{40}'
+)
 
 # Print the name for docker tag
 #
-# $1 : git checkout directory
-get_docker_tag() { get_source_branch "$1" | sed 's/^master$/latest/'; }
+# $1 : git worktree
+get_docker_tag() (
+    cd "$1"
+    git branch --format='%(refname:short)' \
+        | sed 's/^master$/latest/' \
+        | xargs \
+        | grep -Ex '[[:lower:]]+'
+)
 
 ################################################################################
-
-env | sort
+################################################################################
+################################################################################
 
 # VCS_URL
 if [ -n "${VCS_URL:-}" ]; then
     info "VCS_URL: ${VCS_URL}"
-else
-    VCS_URL="$(detect_vcs_url "${project_dir}")"
-    export VCS_URL
+elif VCS_URL="$(detect_vcs_url "${project_dir}")"; then
     warning "detected VCS_URL: ${VCS_URL}"
+else
+    die "failed to get and/or detect VCS_URL"
 fi
+export VCS_URL
 
 # VCS_REF
 if [ -n "${VCS_REF:-}" ]; then
     info "VCS_REF: ${VCS_REF}"
-else
-    VCS_REF="$(detect_vcs_ref "${project_dir}")"
-    export VCS_REF
+elif VCS_REF="$(detect_vcs_ref "${project_dir}")"; then
     warning "detected VCS_REF: ${VCS_REF}"
+else
+    die "failed to get and/or detect VCS_REF"
 fi
+export VCS_REF
 
 # SOURCE_DATE_EPOCH
 if [ -n "${SOURCE_DATE_EPOCH:-}" ]; then
     info "SOURCE_DATE_EPOCH: ${SOURCE_DATE_EPOCH}"
-else
-    SOURCE_DATE_EPOCH="$(detect_source_date_epoch "${project_dir}" "${VCS_REF}")"
-    export SOURCE_DATE_EPOCH
+elif SOURCE_DATE_EPOCH="$(git -C "${project_dir}" show -s --format="%ct" "${VCS_REF}")"; then
     warning "detected SOURCE_DATE_EPOCH: ${SOURCE_DATE_EPOCH}"
+else
+    die "failed to get and/or detect SOURCE_DATE_EPOCH"
 fi
+export SOURCE_DATE_EPOCH
 
 # SOURCE_DATE
 SOURCE_DATE="$(date -uIseconds -d@"${SOURCE_DATE_EPOCH}")"
@@ -144,16 +176,18 @@ else
         export DOCKER_TAG
         warning "defaulting DOCKER_TAG: ${DOCKER_TAG}"
     fi
-    export IMAGE_NAME="${IMAGE_NAME:-${DOCKER_REPO}:${DOCKER_TAG}}"
+    export IMAGE_NAME="${DOCKER_REPO}:${DOCKER_TAG}"
     warning "defaulting IMAGE_NAME: ${IMAGE_NAME}"
 fi
 
-env | sort
+export >&2
 
 # https://medium.com/microscaling-systems/labelling-automated-builds-on-docker-hub-f3d073fb8e1
 # https://stackoverflow.com/questions/41898503/loop-over-environment-variables-in-posix-sh/41914583#41914583
 # shellcheck disable=SC2046
 docker image build \
-    $(awk 'END{for(var in ENVIRON){print var}}' </dev/null | sort | xargs -n1 echo "--build-arg") \
+    $(awk 'END{for(var in ENVIRON){print "--build-arg " var}}' </dev/null) \
     --tag "${IMAGE_NAME}" \
     "${project_dir}"
+
+exit "$?"
